@@ -6,7 +6,7 @@
 
 ### Дедлайн 27/05/21 00:01 - 10 баллов
 
-Задание выполняется на Scala, весь новый функционал приложения должен быть покрыт тестами.
+Задание выполняется на Scala, весь новый функционал приложения должен быть покрыт тестами. В описание пулреквеста требуется приложить гифку работы приложения (идеальный вариант) или скрины.
 
 1) Реализуйте нумерацию сообщений, возможность отвечать на определённое сообщение и отображение в каскадном виде (
    см. [Lecture-3 п.4](https://github.com/Backend-ITMO-2021/Lecture-3)).
@@ -18,6 +18,12 @@
 | adds new message, also updates user views | `POST` | `/messages`           | `{username: $USERNAME, message: $MESSAGE, replyTo:? $optionalInt}` |                                                             |
 | gets messages from specific user          | `GET`  | `/messages/$username` |                                            | `{messages: ["message 1", "message 2", ...]}`               |
 | gets all current messages                 | `GET`  | `/messages`           |                                            | `{messages: [{id: id, username: "user", message: "message", replyTo:? optionalInt}, ...]}` |
+
+Итоговое приложение должно выглядеть примерно так:
+
+![Chat](https://github.com/Backend-ITMO-2021/Lecture-8/blob/main/images/nested-chat.png)
+
+![Filtered Chat](https://github.com/Backend-ITMO-2021/Lecture-8/blob/main/images/filtered-chat.png)
 
 Docs:
 
