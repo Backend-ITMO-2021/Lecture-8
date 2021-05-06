@@ -21,9 +21,9 @@
 
 Итоговое приложение должно выглядеть примерно так:
 
-![Chat](https://github.com/Backend-ITMO-2021/Lecture-8/blob/main/images/nested-chat.png)
+![Chat](https://github.com/Backend-ITMO-2021/Lecture-8/blob/main/images/nested-chat.jpg)
 
-![Filtered Chat](https://github.com/Backend-ITMO-2021/Lecture-8/blob/main/images/filtered-chat.png)
+![Filtered Chat](https://github.com/Backend-ITMO-2021/Lecture-8/blob/main/images/filtered-chat.jpg)
 
 Docs:
 
