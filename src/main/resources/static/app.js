@@ -1,7 +1,7 @@
 function submitForm() {
     fetch("/", {
             method: "POST",
-            body: JSON.stringify({name: nameInput.value, msg: msgInput.value})
+            body: JSON.stringify({name: nameInput.value, msg: msgInput.value, reply: replyInput.value})
         }
     ).then(response => response.json())
         .then(json => {

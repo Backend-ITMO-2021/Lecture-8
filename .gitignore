@@ -2,3 +2,8 @@ target
 .idea
 .bsp
 db.txt
+
+project
+.metals
+.vscode
+.bloop
