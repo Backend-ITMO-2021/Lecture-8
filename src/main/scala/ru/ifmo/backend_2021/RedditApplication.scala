@@ -33,9 +33,10 @@ object RedditApplication extends cask.MainRoutes {
         div(cls := "container border rounded my-5 p-5", css("max-width") := "700px")(
           h1(cls := "mb-5")("Reddit: Swain is mad :("),
 
-          div(id := "messageList")(messageList()),
+          div(id := "messageList", cls := "mb-5")(messageList()),
 
-          div(cls := "mt-5", id := "errorDiv", color.red),
+          div(cls := "mb-3 text-danger fw-bold", id := "errorDiv"),
+
           form(onsubmit := "return submitForm()")(
             div(cls := "input-group")(
               input(`type` := "text", id := "replyInput", cls := "form-control", placeholder := "Reply (Optional)"),
@@ -43,18 +44,23 @@ object RedditApplication extends cask.MainRoutes {
               input(`type` := "text", id := "msgInput", cls := "form-control", placeholder := "Write a message!"),
               button(`type` := "submit", cls := "btn btn-outline-primary", "Send")
             )
+          ),
+
+          form(onsubmit := "return submitFilter()")(
+            div(cls := "input-group mt-3")(
+              input(`type` := "text", id := "filterInput", cls := "form-control", placeholder := "Filter By User"),
+              button(`type` := "submit", cls := "btn btn-outline-secondary", "Filter")
+            )
           )
         )
       )
     )
   )
 
-  def messageList(): generic.Frag[Builder, String] = {
+  def messageList(filter: Option[String] = None): generic.Frag[Builder, String] = {
     def buildMessageThread(message: Message, depth: Int, lb: ListBuffer[Frag], groupedMessages: Map[Option[Int], List[Message]]): Unit = {
       val Message(id, name, msg, _) = message
-      lb.append(
-        p(span(cls := "text-secondary", css("white-space") := "pre-wrap", "    " * depth), span(s"#$id"), " ", b(name), " ", msg)
-      )
+      lb.append(renderMessage(message, depth))
 
       val children = groupedMessages.get(Option(message.id))
       if (children.isDefined) {
@@ -62,16 +68,26 @@ object RedditApplication extends cask.MainRoutes {
       }
     }
 
-    val messages = db.getMessages
-    val messagesGroupedByRoot = messages.groupBy(_.parentId)
-    val lb = ListBuffer[Frag]()
-    val rootMessages = messagesGroupedByRoot.get(None)
+    def renderMessage(message: Message, depth: Int = 0): generic.Frag[Builder, String] = {
+      val Message(id, name, msg, _) = message
+      p(span(css("white-space") := "pre-wrap", "    " * depth), span(cls := "text-secondary", s"#$id"), " ", b(name), " ", msg)
+    }
 
-    rootMessages.get.foreach(rootMessage => {
-      buildMessageThread(rootMessage, 0, lb, messagesGroupedByRoot)
-    })
+    if (filter.isDefined) {
+      val messages = db.getMessages.filter(_.username == filter.get)
+      frag(for (msg <- messages) yield renderMessage(msg))
+    } else {
+      val messages = db.getMessages
+      val messagesGroupedByRoot = messages.groupBy(_.parentId)
+      val lb = ListBuffer[Frag]()
+      val rootMessages = messagesGroupedByRoot.get(None)
 
-    lb.result()
+      rootMessages.get.foreach(rootMessage => {
+        buildMessageThread(rootMessage, 0, lb, messagesGroupedByRoot)
+      })
+
+      lb.result()
+    }
   }
 
   @cask.websocket("/subscribe")
@@ -97,6 +113,15 @@ object RedditApplication extends cask.MainRoutes {
       }
 
       connectionPool.sendAll(Ws.Text(messageList().render))
+      ujson.Obj("success" -> true, "err" -> "")
+    }
+  }
+
+  @cask.postJson("/filter")
+  def postChatMsg(username: String): ujson.Obj = {
+    if (username.contains("#")) ujson.Obj("success" -> false, "err" -> "Username cannot contain '#'")
+    else synchronized {
+      connectionPool.sendAll(Ws.Text(messageList(if (username.length > 0) Some(username) else None).render))
       ujson.Obj("success" -> true, "err" -> "")
     }
   }
