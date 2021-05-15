@@ -64,7 +64,7 @@ case class AppStatic()(implicit cc: castor.Context, log: cask.Logger) extends ca
     else if (username.contains("#")) ujson.Obj("success" -> false, "err" -> "Username cannot contain '#'")
     else if (replyTo.contains("#")) ujson.Obj("success" -> false, "err" -> "Reply To cannot contain '#'")
     else synchronized {
-      db.appendMessage(username, message, Option.unless(replyTo == "")(replyTo.toInt))
+      db.appendMessage(username, message, replyTo.toIntOption)
       connectionPool.sendAll(Ws.Text(messageList(db.getMessages).render))
       ujson.Obj("success" -> true, "err" -> "")
     }
@@ -73,7 +73,7 @@ case class AppStatic()(implicit cc: castor.Context, log: cask.Logger) extends ca
   @cask.postJson("/filter")
   def userMsg(username: String): ujson.Obj = {
     synchronized {
-      connectionPool.sendAll(Ws.Text(messageList(db.getMessages, Option.unless(username.length == 0)(username)).render))
+      connectionPool.sendAll(Ws.Text(messageList(db.getMessages, Some(username)).render))
       ujson.Obj("success" -> true, "err" -> "")
     }
   }
