@@ -6,7 +6,8 @@ import cask.util.{Logger, Ws}
 import cask.{WsActor, WsChannelActor}
 
 object WsConnectionPool {
-  def apply(): ConnectionPool = new ConnectionPoolImpl()
+  val connection = new ConnectionPoolImpl()
+  def apply(): ConnectionPool = connection
 }
 
 class ConnectionPoolImpl extends ConnectionPool {
