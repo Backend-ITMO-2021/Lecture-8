@@ -15,13 +15,15 @@ object ApplicationUtils {
   def getDB: MessageDB = PseudoDB(s"db.txt", clean = true)
 
   def messageList(messages: List[Message], filter: Option[String] = None): generic.Frag[Builder, String] = {
-    def buildMessageThread(message: Message, depth: Int, lb: ListBuffer[Frag], groupedMessages: Map[Option[Int], List[Message]]): Unit = {
-      val Message(id, name, msg, _) = message
-      lb.append(renderMessage(message, depth))
 
-      val children = groupedMessages.get(Option(message.id))
-      if (children.isDefined) {
-        children.get.foreach(childMessage => buildMessageThread(childMessage, depth + 1, lb, groupedMessages))
+    def buildMessageThread(groupedMessages: Map[Option[Int], List[Message]], parentId: Option[Int] = None, depth: Int = 0): Frag = {
+      val messages = groupedMessages.get(parentId)
+
+      if (messages.isEmpty) {
+        frag()
+      } else {
+        for (message <- messages.get)
+          yield frag(renderMessage(message, depth), buildMessageThread(groupedMessages, Some(message.id), depth + 1))
       }
     }
 
@@ -35,14 +37,7 @@ object ApplicationUtils {
       frag(for (msg <- filtered) yield renderMessage(msg))
     } else {
       val messagesGroupedByRoot = messages.groupBy(_.replyTo)
-      val lb = ListBuffer[Frag]()
-      val rootMessages = messagesGroupedByRoot.get(None)
-
-      rootMessages.get.foreach(rootMessage => {
-        buildMessageThread(rootMessage, 0, lb, messagesGroupedByRoot)
-      })
-
-      lb.result()
+      buildMessageThread(messagesGroupedByRoot)
     }
   }
 }
