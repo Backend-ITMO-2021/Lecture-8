@@ -70,14 +70,6 @@ case class AppStatic()(implicit cc: castor.Context, log: cask.Logger) extends ca
     }
   }
 
-  @cask.postJson("/filter")
-  def userMsg(username: String): ujson.Obj = {
-    synchronized {
-      connectionPool.sendAll(Ws.Text(messageList(db.getMessages, Some(username)).render))
-      ujson.Obj("success" -> true, "err" -> "")
-    }
-  }
-
   @cask.websocket("/subscribe")
   def subscribe(): WsHandler = connectionPool.wsHandler { connection =>
     connectionPool.send(Ws.Text(messageList(db.getMessages).render))(connection)

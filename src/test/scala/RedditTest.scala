@@ -92,7 +92,7 @@ object RedditTest extends TestSuite {
 
       // Messages Filtering
       wsPromise = scala.concurrent.Promise[String]
-      val response4 = requests.post(s"$host/filter", data = ujson.Obj("username" -> "max"))
+      wsClient.send(cask.Ws.Text("max"))
 
       val wsMsg4 = Await.result(wsPromise.future, Inf)
       assert(wsMsg4.contains("max"))

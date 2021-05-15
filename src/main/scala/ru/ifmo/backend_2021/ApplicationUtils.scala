@@ -5,7 +5,6 @@ import scalatags.Text.all._
 import scalatags.Text.tags2
 import scalatags.generic
 import scalatags.text.Builder
-import scala.collection.mutable.ListBuffer
 import ru.ifmo.backend_2021.pseudodb.{MessageDB, PseudoDB}
 
 object ApplicationUtils {
