@@ -11,23 +11,39 @@ object WsConnectionPool {
 
 class ConnectionPoolImpl extends ConnectionPool {
   private var openConnections: Set[WsChannelActor] = Set.empty[WsChannelActor]
+
   def getConnections: List[WsChannelActor] =
     synchronized(openConnections.toList)
+
   def send(event: Event): WsChannelActor => Unit = _.send(event)
-  def sendAll(event: Event): Unit = for (conn <- synchronized(openConnections)) send(event)(conn)
-  def addConnection(connection: WsChannelActor)(implicit ac: castor.Context, log: Logger): WsActor = {
+
+  def sendAll(event: Event): Unit = sendAll(_ => event)
+
+  def sendAll(event: WsChannelActor => Event): Unit = for (conn <- synchronized(openConnections)) send(event(conn))(conn)
+
+  def addConnection(connection: WsChannelActor, handleEvent: PartialFunction[Event, Unit])
+                   (implicit ac: castor.Context, log: Logger): WsActor = {
     synchronized {
       openConnections += connection
     }
-    WsActor { case Ws.Close(_, _) =>
-      synchronized {
-        openConnections -= connection
+
+    WsActor { event =>
+      handleEvent.lift(event)
+
+      if (event.isInstanceOf[Ws.Close]) {
+        synchronized {
+          openConnections -= connection
+        }
       }
     }
   }
-  def wsHandler(onConnect: WsChannelActor => Unit)(implicit ac: castor.Context, log: Logger): WsHandler = WsHandler { connection =>
+
+  def wsHandler(onConnect: WsChannelActor => Unit)
+               (handleEvent: WsChannelActor => PartialFunction[Event, Unit])
+               (implicit ac: castor.Context, log: Logger)
+  : WsHandler = WsHandler { connection =>
     log.debug("New Connection")
     onConnect(connection)
-    addConnection(connection)
+    addConnection(connection, handleEvent(connection))
   }
 }

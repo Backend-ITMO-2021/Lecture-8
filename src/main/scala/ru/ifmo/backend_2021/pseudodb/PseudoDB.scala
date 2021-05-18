@@ -18,8 +18,8 @@ class PseudoDB(filename: String) extends MessageDB {
 
   lazy val defaultMessages =
     List(
-      Message("ventus976", "I don't particularly care which interaction they pick so long as it's consistent."),
-      backend_2021.Message("XimbalaHu3", "Exactly, both is fine but do pick one.")
+      Message(Some(1), "ventus976", "I don't particularly care which interaction they pick so long as it's consistent.", None),
+      backend_2021.Message(Some(2), "XimbalaHu3", "Exactly, both is fine but do pick one.", None)
     )
 
   def clear(): Unit =
@@ -38,12 +38,27 @@ class PseudoDB(filename: String) extends MessageDB {
     FileUtils.withFileReader[List[Message]](filename)(_.map(Message(_)))
   }
 
-  def addMessage(message: Message): Unit = synchronized {
+  def addMessage(message: Message): Either[String, Message] = synchronized {
     createIfNotExists()
+
     val source = Source.fromFile(filename)
-    val result = FileUtils.withFileReader[List[String]](filename)(identity) :+ message.toFile
-    FileUtils.withFileWriter(filename)(_.write(result.mkString("\n")))
-    source.close()
+    try {
+      val old = FileUtils.withFileReader[List[String]](filename)(identity)
+      val oldMessages = old.map(Message(_))
+
+      if (message.replyTo.nonEmpty && !oldMessages.exists(_.id == message.replyTo)) {
+        return Left("replyTo")
+      }
+
+      val newMessage = message.id(oldMessages.map(_.id).max.getOrElse(0) + 1)
+      val result = old :+ newMessage.toFile
+
+      FileUtils.withFileWriter(filename)(_.write(result.mkString("\n")))
+
+      return Right(newMessage)
+    } finally {
+      source.close()
+    }
   }
 }
 
