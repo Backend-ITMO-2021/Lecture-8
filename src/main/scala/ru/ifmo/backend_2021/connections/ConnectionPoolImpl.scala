@@ -4,6 +4,7 @@ import cask.endpoints.WsHandler
 import cask.util.Ws.Event
 import cask.util.{Logger, Ws}
 import cask.{WsActor, WsChannelActor}
+import ru.ifmo.backend_2021.RedditApplication.filterMessageList
 
 object WsConnectionPool {
   def apply(): ConnectionPool = new ConnectionPoolImpl()
@@ -19,7 +20,9 @@ class ConnectionPoolImpl extends ConnectionPool {
     synchronized {
       openConnections += connection
     }
-    WsActor { case Ws.Close(_, _) =>
+    WsActor {
+      case cask.Ws.Text(data) => connection.send(cask.Ws.Text(filterMessageList(Option.unless(data == "")(data)).render))
+      case Ws.Close(_, _) =>
       synchronized {
         openConnections -= connection
       }
