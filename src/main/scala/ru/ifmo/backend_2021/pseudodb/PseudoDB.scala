@@ -18,8 +18,8 @@ class PseudoDB(filename: String) extends MessageDB {
 
   lazy val defaultMessages =
     List(
-      Message("ventus976", "I don't particularly care which interaction they pick so long as it's consistent."),
-      backend_2021.Message("XimbalaHu3", "Exactly, both is fine but do pick one.")
+      Message("1", "ventus976", "I don't particularly care which interaction they pick so long as it's consistent."),
+      backend_2021.Message("2", "XimbalaHu3", "Exactly, both is fine but do pick one.")
     )
 
   def clear(): Unit =

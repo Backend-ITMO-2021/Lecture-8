@@ -1,7 +1,7 @@
 function submitForm() {
     fetch("/", {
             method: "POST",
-            body: JSON.stringify({name: nameInput.value, msg: msgInput.value})
+            body: JSON.stringify({username: nameInput.value, msg: msgInput.value, idParent: replyIDInput.value})
         }
     ).then(response => response.json())
         .then(json => {
@@ -14,4 +14,9 @@ function submitForm() {
 var socket = new WebSocket("ws://" + location.host + "/subscribe");
 socket.onmessage = function (ev) {
     messageList.innerHTML = ev.data
+}
+
+function submitFilter() {
+    socket.send(filterInput.value)
+    return false
 }
