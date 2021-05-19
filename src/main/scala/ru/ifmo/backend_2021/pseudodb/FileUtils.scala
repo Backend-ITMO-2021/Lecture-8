@@ -4,7 +4,7 @@ import java.io.{BufferedWriter, File, PrintWriter}
 import scala.io.Source
 
 object FileUtils {
-  def withFileReader[T](fileName: String)(callback: List[String] => T):T  = {
+  def withFileReader[T](fileName: String)(callback: List[String] => T): T = {
     val source = Source.fromFile(fileName)
     try {
       callback(source.getLines().toList)

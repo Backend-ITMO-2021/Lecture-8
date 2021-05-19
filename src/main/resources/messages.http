@@ -1,0 +1,16 @@
+POST http://localhost:8080/messages
+Content-Type: application/json
+
+{"username": "winnie", "message": "pooh"}
+
+###
+POST http://localhost:8080/messages
+Content-Type: application/json
+
+{"username": "scooby", "message": "doo", "replyTo":  3}
+
+###
+GET http://localhost:8080/messages
+
+###
+http://localhost:8080/messages/winnie
