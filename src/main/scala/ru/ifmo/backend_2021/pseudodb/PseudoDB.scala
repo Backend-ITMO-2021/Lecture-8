@@ -18,8 +18,11 @@ class PseudoDB(filename: String) extends MessageDB {
 
   lazy val defaultMessages =
     List(
-      Message("ventus976", "I don't particularly care which interaction they pick so long as it's consistent."),
-      backend_2021.Message("XimbalaHu3", "Exactly, both is fine but do pick one.")
+      Message("1", None, "ventus976", "I don't particularly care which interaction they pick so long as it's consistent."),
+      Message("2", None, "XimbalaHu3", "Exactly, both is fine but do pick one."),
+      Message("3", Some("2"), "XimbalaHu3", "Exactly, both is fine but do pick one."),
+      Message("4", Some("3"), "XimbalaHu3", "Exactly, both is fine but do pick one."),
+      Message("5", None, "XimbalaHu3", "Exactly, both is fine but do pick one.")
     )
 
   def clear(): Unit =
@@ -36,6 +39,11 @@ class PseudoDB(filename: String) extends MessageDB {
   def getMessages: List[Message] = synchronized {
     createIfNotExists()
     FileUtils.withFileReader[List[Message]](filename)(_.map(Message(_)))
+  }
+
+  def getLastId: String = synchronized {
+    createIfNotExists()
+    FileUtils.withFileReader[String](filename)(_.last.split("#").toList.head)
   }
 
   def addMessage(message: Message): Unit = synchronized {
