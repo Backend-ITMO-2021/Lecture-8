@@ -77,7 +77,7 @@ object RedditApplication extends cask.MainRoutes {
   }
 
   @cask.postJson("/")
-  def postChatMsg(name: String, msg: String, replyTo: String): ujson.Obj = {
+  def postChatMsg(name: String, msg: String, replyTo: String = ""): ujson.Obj = {
     log.debug(name, msg)
     val replyId = replyTo.toIntOption.getOrElse(-1)
     val messages = getMessageList
@@ -93,9 +93,35 @@ object RedditApplication extends cask.MainRoutes {
       } else {
         (-1, 0)
       }
-      db.addMessage(Message(name, msg, db.getMessages.size, parentId, depth))
+      db.addMessage(Message(name, msg, messages.size, parentId, depth))
       connectionPool.sendAll(Ws.Text(messageList().render))
       ujson.Obj("success" -> true, "err" -> "")
+    }
+  }
+
+  @cask.postJson("/messages")
+  def addMessage(username: String, message: String, replyTo: Int = -1): ujson.Obj = {
+    synchronized {
+      postChatMsg(username, message, replyTo.toString)
+    }
+  }
+
+  @cask.get("/messages/:username")
+  def getUserMessages(username: String): ujson.Obj = {
+    synchronized {
+      val messages = db.getMessages.filter(_.username == username).map(_.message)
+      ujson.Obj("messages" -> messages)
+    }
+  }
+
+  @cask.get("/messages")
+  def getMessages(): ujson.Obj = {
+    synchronized {
+      ujson.Obj("messages" -> getMessageList.sortBy(_.id).map(message => {
+        val obj = ujson.Obj("id" -> message.id, "username" -> message.username, "message" -> message.message)
+        if (message.parentId != -1) obj("parentId") = message.parentId
+        obj
+      }))
     }
   }
 
