@@ -34,15 +34,22 @@ object RedditApplication extends cask.MainRoutes {
             input(`type` := "text", id := "nameInput", placeholder := "Username"),
             input(`type` := "text", id := "msgInput", placeholder := "Write a message!"),
             input(`type` := "submit", value := "Send"),
+          ),
+          form(onsubmit := "return filterForm()")(
+            input(`type` := "text", id := "filterInput", placeholder := "Filter Messages"),
+            input(`type` := "submit", value := "Send")
           )
         )
       )
     )
   )
 
-  def messageList(): generic.Frag[Builder, String] = {
+  def messageList(filter: Option[String] = None): generic.Frag[Builder, String] = {
     val messages = getMessageList
-    frag(for ((message, i) <- messages.zipWithIndex) yield message.getHtmlMessage(i + 1))
+    frag(for (
+      (message, i) <- messages.zipWithIndex
+      if filter.isDefined && message.username == filter.get || filter.isEmpty
+    ) yield message.getHtmlMessage(i + 1, filter.isDefined))
   }
 
   private def getMessageList: List[Message] = {

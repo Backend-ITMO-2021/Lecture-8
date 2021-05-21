@@ -11,6 +11,11 @@ function submitForm() {
     return false;
 }
 
+function filterForm(){
+    socket.send(filterInput.value)
+    return false;
+}
+
 var socket = new WebSocket("ws://" + location.host + "/subscribe");
 socket.onmessage = function (ev) {
     messageList.innerHTML = ev.data
