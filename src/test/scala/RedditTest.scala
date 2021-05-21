@@ -16,7 +16,7 @@ object RedditTest extends TestSuite {
       }
       val success = requests.get(host)
 
-      assert(success.text().contains("Reddit: Swain is mad :("))
+      assert(success.text().contains("Reddit: Thresh is mad :("))
       assert(success.text().contains("ventus976"))
       assert(
         success
@@ -84,9 +84,8 @@ object RedditTest extends TestSuite {
       wsClient.send(cask.Ws.Text("filter?=thresh"))
 
       val wsMsg3 = Await.result(wsPromise.future, Inf)
-      assert(wsMsg3.contains("#5 Test Message!"))
-      assert(wsMsg3.contains("#6 Test Message!"))
-      assert(wsMsg3.contains("#7 You can always trust Braum!"))
+      assert(wsMsg3.contains("Test Message!"))
+      assert(wsMsg3.contains("You can always trust Braum!"))
 
       val api1 = requests.get(s"$host/messages")
       val apiMsg1 = ujson.read(api1)
@@ -105,7 +104,7 @@ object RedditTest extends TestSuite {
       assert(apiMsg3("success") == ujson.True)
 
       val wsMsg4 = Await.result(wsPromise.future, Inf)
-      assert(wsMsg3.contains("Nobody escapes."))
+      assert(wsMsg4.contains("Nobody escapes."))
     }
     test("failure") - withServer(RedditApplication) { host =>
       val response1 =

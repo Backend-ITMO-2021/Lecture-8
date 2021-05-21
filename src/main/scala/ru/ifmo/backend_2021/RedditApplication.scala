@@ -140,7 +140,12 @@ object RedditApplication extends cask.MainRoutes {
     else {
       val messageId = db.getMessages.length + 1
       db.addMessage(
-        Message(messageId, username, message, Option(replyTo))
+        Message(
+          messageId,
+          username,
+          message,
+          if (replyTo != 0) Option(replyTo) else None
+        )
       )
       connectionPool.sendAll(Ws.Text(messageList().render))
       ujson.Obj("success" -> true, "err" -> "")
