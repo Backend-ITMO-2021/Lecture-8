@@ -102,7 +102,7 @@ object RedditApplication extends cask.MainRoutes {
   @cask.postJson("/messages")
   def addMessage(username: String, message: String, replyTo: Int = -1): ujson.Obj = {
     synchronized {
-      postChatMsg(username, message, replyTo.toString)
+      postChatMsg(username, message, if(replyTo == -1) "" else replyTo.toString)
     }
   }
 

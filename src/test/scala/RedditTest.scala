@@ -1,5 +1,5 @@
 import TestUtils.withServer
-import ru.ifmo.backend_2021.RedditApplication
+import ru.ifmo.backend_2021.{Message, RedditApplication}
 import utest.{TestSuite, Tests, test}
 import castor.Context.Simple.global
 import cask.util.Logger.Console._
@@ -53,7 +53,53 @@ object RedditTest extends TestSuite {
       assert(success2.text().contains("ilya"))
       assert(success2.text().contains("Test Message!"))
       assert(success2.statusCode == 200)
+
+      // numerating
+      assert(success.text().contains("#1"))
+      assert(success.text().contains("#2"))
+
+      // cascade & reply
+      wsPromise = scala.concurrent.Promise[String]
+      requests.post(host, data = ujson.Obj("name" -> "test", "msg" -> "Test Message!", "replyTo" -> "1"))
+
+      val cascadeSuccess = requests.get(host)
+      assert(cascadeSuccess.text().contains("    </span>#2 <b>test</b>"))
+
+      // filter messages
+      wsPromise = scala.concurrent.Promise[String]
+      wsClient.send(cask.Ws.Text("test"))
+
+      val wsMsg3 = Await.result(wsPromise.future, Inf)
+
+      assert(wsMsg3.contains("#2"))
+      assert(wsMsg3.contains("test"))
+      assert(!wsMsg3.contains("ventus976"))
+      assert(!wsMsg3.contains("ilya"))
+      assert(!wsMsg3.contains("XimbalaHu3"))
+
+      // api
+      val messagesResponse = requests.get(s"$host/messages")
+      val messages = ujson.read(messagesResponse)("messages")
+      assert(messages.arr.length == 4)
+      assert(messages(0).toString().contains("\"username\":\"ventus976\""))
+      assert(messages(1).toString().contains("\"username\":\"XimbalaHu3\""))
+      assert(messages(2).toString().contains("\"username\":\"ilya\""))
+      assert(messages(3).toString().contains("\"username\":\"test\""))
+
+      val userMessageResponse = requests.get(s"$host/messages/test")
+      val userMessages = ujson.read(userMessageResponse)("messages")
+      assert(userMessages.arr.length == 1)
+      assert(userMessages.arr(0).toString().contains("Test Message!"))
+
+      wsPromise = scala.concurrent.Promise[String]
+      val addMessageResponse = ujson.read(requests.post(s"$host/messages", data = ujson.Obj("username" -> "test2", "message" -> "Test message 2!")))
+      assert(addMessageResponse("success") == ujson.True)
+      assert(addMessageResponse("err") == ujson.Str(""))
+
+      val wsMsg4 = Await.result(wsPromise.future, Inf)
+      assert(wsMsg4.contains("Test message 2!"))
     }
+
     test("failure") - withServer(RedditApplication) { host =>
       val response1 = requests.post(host, data = ujson.Obj("name" -> "ilya"), check = false)
       assert(response1.statusCode == 400)
@@ -71,6 +117,18 @@ object RedditTest extends TestSuite {
       assert(
         ujson.read(response4) ==
           ujson.Obj("success" -> false, "err" -> "Username cannot contain '#'")
+      )
+
+      val response5 = requests.post(host, data = ujson.Obj("name" -> "123123", "msg" -> "Test Message!", "replyTo" -> "0"))
+      assert(
+        ujson.read(response5) ==
+          ujson.Obj("success" -> false, "err" -> "Incorrect message number")
+      )
+
+      val response6 = requests.post(host, data = ujson.Obj("name" -> "123123", "msg" -> "Test Message!", "replyTo" -> "asdas"))
+      assert(
+        ujson.read(response6) ==
+          ujson.Obj("success" -> false, "err" -> "Incorrect message number")
       )
     }
 
