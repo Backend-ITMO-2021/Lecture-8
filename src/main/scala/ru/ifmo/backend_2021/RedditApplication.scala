@@ -13,7 +13,41 @@ import ujson.Obj
 object RedditApplication extends cask.MainRoutes {
   val serverUrl = s"http://$host:$port"
   val db: MessageDB = PseudoDB(s"db.txt", clean = true)
-  val connectionPool: ConnectionPool = WsConnectionPool()
+
+  def filteredMessageList(name: String): generic.Frag[Builder, String] = frag {
+    for {
+      (lvl, msg) <- showCascade(db.getMessages).filter { case (_, msg) => msg.username == name }
+    } yield pre(" " * lvl, "#", msg.id, " ", b(msg.username), " ", msg.message)
+  }
+
+  def messageList(): generic.Frag[Builder, String] = frag {
+    for {
+      (lvl, msg) <- showCascade(db.getMessages)
+    } yield pre(" " * lvl, "#", msg.id, " ", b(msg.username), " ", msg.message)
+  }
+
+  private def showCascade(messages: List[Message]): List[(Int, Message)] = {
+    val groupedMessages: Map[Int, List[Message]] = messages.groupMap(_.parentId)(identity).transform {
+      case _ -> value => value.sortBy(_.id)
+    }
+
+    def go(level: Int, messages: List[Message]): List[(Int, Message)] = {
+      if (messages.isEmpty) {
+        List.empty[(Int, Message)]
+      } else {
+        messages.flatMap(msg => (level, msg) +: go(level + 1, groupedMessages.getOrElse(msg.id, List.empty)))
+      }
+    }
+
+    go(0, groupedMessages(0))
+  }
+
+  def messagesFilter(name: Option[String]): String = {
+    if (name.isEmpty ) messageList().render else filteredMessageList(name.get).render
+  }
+
+
+  val connectionPool: ConnectionPool = WsConnectionPool(messagesFilter)
 
   @cask.staticResources("/static")
   def staticResourceRoutes() = "static"
@@ -45,39 +79,9 @@ object RedditApplication extends cask.MainRoutes {
     )
   )
 
-  def filteredMessageList(name: String): generic.Frag[Builder, String] = frag {
-    for {
-      (lvl, msg) <- showCascade(db.getMessages).filter{ case (_, msg) => msg.username == name }
-    } yield pre(" " * lvl, "#", msg.id, " ", b(msg.username), " ", msg.message)
-  }
-
-  def messageList(): generic.Frag[Builder, String] = frag {
-    for {
-      (lvl, msg) <- showCascade(db.getMessages)
-    } yield pre(" " * lvl, "#", msg.id, " ", b(msg.username), " ", msg.message)
-  }
-
-  private def showCascade(messages: List[Message]): List[(Int, Message)] = {
-    println(messages)
-    val groupedMessages: Map[Int, List[Message]] = messages.groupMap(_.parentId)(identity).transform {
-      case _ -> value => value.sortBy(_.id)
-    }
-    println(groupedMessages)
-
-    def go(level: Int, messages: List[Message]): List[(Int, Message)] = {
-      if (messages.isEmpty) {
-        List.empty[(Int, Message)]
-      } else {
-        messages.flatMap(msg => (level, msg) +: go(level + 1, groupedMessages.getOrElse(msg.id, List.empty)))
-      }
-    }
-
-    go(0, groupedMessages(0))
-  }
-
   @cask.websocket("/subscribe")
-  def subscribe(): WsHandler = connectionPool.wsHandler { connection =>
-    connectionPool.send(Ws.Text(messageList().render))(connection)
+  def subscribe(): WsHandler = connectionPool.wsHandler { channel =>
+    channel.send(Ws.Text(messageList().render))
   }
 
   @cask.postJson("/")
@@ -88,19 +92,9 @@ object RedditApplication extends cask.MainRoutes {
     else if (name.contains("#")) ujson.Obj("success" -> false, "err" -> "Username cannot contain '#'")
     else synchronized {
       db.addMessage(new Message(db.getMessages.maxByOption(_.id).map(_.id).getOrElse(0) + 1, replyTo, name, msg))
-      connectionPool.sendAll(Ws.Text(messageList().render))
+      connectionPool.sendAllWithFilter()
       ujson.Obj("success" -> true, "err" -> "")
     }
-  }
-
-  @cask.getJson("/filter")
-  def filterMessages(name: String = ""): ujson.Obj = {
-    if (name.isEmpty) {
-      connectionPool.sendAll(Ws.Text(messageList().render))
-    } else {
-      connectionPool.sendAll(Ws.Text(filteredMessageList(name).render))
-    }
-    ujson.Obj("success" -> true, "err" -> "")
   }
 
   @cask.postJson("/messages")

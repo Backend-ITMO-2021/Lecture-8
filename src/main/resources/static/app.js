@@ -16,15 +16,12 @@ function submitForm() {
 }
 
 function filter() {
-    fetch("/filter?name=" + filterInput.value).then(response => response.json())
-        .then(json => {
-            if (json["success"]) filterInput.value = ""
-            errorDiv.innerText = json["err"]
-        })
+    socket.send(filterInput.value)
     return false;
 }
 
 var socket = new WebSocket("ws://" + location.host + "/subscribe");
 socket.onmessage = function (ev) {
+    console.log("HI!")
     messageList.innerHTML = ev.data
 }
