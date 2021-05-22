@@ -65,18 +65,6 @@ object RedditTest extends TestSuite {
       val cascadeSuccess = requests.get(host)
       assert(cascadeSuccess.text().contains("    </span>#2 <b>test</b>"))
 
-      // filter messages
-      wsPromise = scala.concurrent.Promise[String]
-      wsClient.send(cask.Ws.Text("test"))
-
-      val wsMsg3 = Await.result(wsPromise.future, Inf)
-
-      assert(wsMsg3.contains("#2"))
-      assert(wsMsg3.contains("test"))
-      assert(!wsMsg3.contains("ventus976"))
-      assert(!wsMsg3.contains("ilya"))
-      assert(!wsMsg3.contains("XimbalaHu3"))
-
       // api
       val messagesResponse = requests.get(s"$host/messages")
       val messages = ujson.read(messagesResponse)("messages")
@@ -98,6 +86,18 @@ object RedditTest extends TestSuite {
 
       val wsMsg4 = Await.result(wsPromise.future, Inf)
       assert(wsMsg4.contains("Test message 2!"))
+
+      // filter messages
+      wsPromise = scala.concurrent.Promise[String]
+      wsClient.send(cask.Ws.Text("test"))
+
+      val wsMsg3 = Await.result(wsPromise.future, Inf)
+
+      assert(wsMsg3.contains("#2"))
+      assert(wsMsg3.contains("test"))
+      assert(!wsMsg3.contains("ventus976"))
+      assert(!wsMsg3.contains("ilya"))
+      assert(!wsMsg3.contains("XimbalaHu3"))
     }
 
     test("failure") - withServer(RedditApplication) { host =>
