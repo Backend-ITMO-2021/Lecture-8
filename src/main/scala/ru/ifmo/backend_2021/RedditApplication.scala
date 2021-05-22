@@ -94,7 +94,7 @@ object RedditApplication extends cask.MainRoutes {
         (-1, 0)
       }
       db.addMessage(Message(name, msg, messages.size, parentId, depth))
-      connectionPool.sendAll(Ws.Text(messageList().render))
+      connectionPool.sendAll(connection => Ws.Text(messageList(connectionPool.getFilter(connection)).render))
       ujson.Obj("success" -> true, "err" -> "")
     }
   }
