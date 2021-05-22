@@ -68,9 +68,9 @@ object RedditApplication extends cask.MainRoutes {
 
     }
 
-    if (filter.isDefined)
+    if (filter.isDefined & filter.getOrElse("") != "") {
       filterMessage(db.getMessages, filter.get.trim)
-    else {
+    } else {
       val sortedMessages = db.getMessages.groupBy(_.parent)
       nextMessage(sortedMessages, 0, None)
     }
@@ -81,8 +81,7 @@ object RedditApplication extends cask.MainRoutes {
 
   @cask.websocket("/subscribe")
   def subscribe(): WsHandler = connectionPool.wsHandler { connection =>
-    connectionPool.send(Ws.Text(messageList().render))(connection)
-  }
+    connectionPool.sendAll(connection => Ws.Text(messageList().render))  }
 
   @cask.postJson("/")
   def postChatMsg(name: String, msg: String, parent: String =""): ujson.Obj = {
@@ -93,7 +92,7 @@ object RedditApplication extends cask.MainRoutes {
     else if (parent.contains("#")) ujson.Obj("success" -> false, "err" -> "Reply To cannot contain '#'")
     else synchronized {
       db.addMessage(Message(db.getMessages.length + 1, name, msg, parent.toIntOption))
-      connectionPool.sendAll(Ws.Text(messageList().render))
+      connectionPool.sendAll(connection => Ws.Text(messageList(connectionPool.getFilter(connection)).render))
       ujson.Obj("success" -> true, "err" -> "")
     }
   }
@@ -122,9 +121,9 @@ object RedditApplication extends cask.MainRoutes {
     else if (msg == "") ujson.Obj("success" -> false, "err" -> "Message cannot be empty")
     else if (name.contains("#")) ujson.Obj("success" -> false, "err" -> "Username cannot contain '#'")
     else if (parent.contains("#")) ujson.Obj("success" -> false, "err" -> "Reply To cannot contain '#'")
-    else {
+    else synchronized {
       db.addMessage(Message(db.getMessages.length + 1, name, msg, parent.toIntOption))
-      connectionPool.sendAll(Ws.Text(messageList().render))
+      connectionPool.sendAll(connection => Ws.Text(messageList().render))
       ujson.Obj("success" -> true, "err" -> "")
     }
   }
