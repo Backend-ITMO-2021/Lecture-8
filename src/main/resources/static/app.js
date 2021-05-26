@@ -11,30 +11,19 @@ function submitForm() {
     return false;
 }
 
+//let isCascade = false
 function changeDisplayForm() {
    console.log("Change display form handler")
-   fetch("/cascade", {
-    method: "POST",
-     body: JSON.stringify({ })
-   }).then(response => response.json())
-             .then(json => {
-                 if (json["success"]) msgInput.value = ""
-                 errorDiv.innerText = json["err"]
-             })
-    return false
+   socket.send(`changeDisplay?`);
+   return false;
 }
 
 function filterForm() {
     console.log("Filter form handler")
-    fetch("/user-filter", {
-            method: "POST",
-            body: JSON.stringify({filterStr: filterInput.value})
-        }
-    ).then(response => response.json())
-        .then(json => {
-            if (json["success"]) msgInput.value = ""
-            errorDiv.innerText = json["err"]
-        })
+    const value = filterInput.value.trim();
+    socket.send(`filter=${value}`);
+
+
     return false;
 }
 

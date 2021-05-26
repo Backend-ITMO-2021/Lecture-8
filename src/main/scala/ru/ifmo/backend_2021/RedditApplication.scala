@@ -3,8 +3,7 @@ package ru.ifmo.backend_2021
 import cask.endpoints.WsHandler
 import cask.util.Ws
 import ru.ifmo.backend_2021.ApplicationUtils.Document
-import ru.ifmo.backend_2021.RedditApplication.{filter, isCascade}
-import ru.ifmo.backend_2021.connections.{ConnectionPool, WsConnectionPool}
+import ru.ifmo.backend_2021.connections.{ConnectionParams, ConnectionPool, WsConnectionPool}
 import ru.ifmo.backend_2021.pseudodb.{MessageDB, PseudoDB}
 import scalatags.Text.all._
 import scalatags.{Text, generic}
@@ -18,8 +17,6 @@ object RedditApplication extends cask.MainRoutes {
   val serverUrl = s"http://$host:$port"
   val db: MessageDB = PseudoDB(s"db.txt", clean = true)
   val connectionPool: ConnectionPool = WsConnectionPool()
-  var isCascade = false
-  var filter: Option[String] = None
 
   @cask.staticResources("/static")
   def staticResourceRoutes() = "static"
@@ -42,7 +39,7 @@ object RedditApplication extends cask.MainRoutes {
                 input(`type` := "submit", value := "Apply"),
               )
             ),
-            div(id := "messageList", style := "margin-top: 27px;")(messageList()),
+            div(id := "messageList", style := "margin-top: 27px;")(messageList(db.getMessages)),
             div(id := "errorDiv", color.red),
             form(onsubmit := "return submitForm()")(
               input(`type` := "text", id := "toInput", placeholder := "Reply to (can be empty)"),
@@ -62,11 +59,12 @@ object RedditApplication extends cask.MainRoutes {
     )
   )
 
-  def messageList(): generic.Frag[Builder, String] = {
-    val messages = filter match {
+  def userFilter(filter: Option[String]): List[Message] = filter match {
       case Some(filterValue) => db.getMessages.filter(msg => msg.username.contains(filterValue))
       case None => db.getMessages
     }
+
+  def messageList(messages: List[Message], isCascade: Boolean = false): generic.Frag[Builder, String] = {
     if (messages.isEmpty) {
       frag("No messages");
     } else {
@@ -108,16 +106,22 @@ object RedditApplication extends cask.MainRoutes {
   }
 
   def displayMode(): generic.Frag[Builder, String] = {
-    frag(h3(s"Display: ${if (isCascade) "Cascade" else "Column"}"))
+    frag(h3(s"Display: Cascade"))
   }
 
   @cask.websocket("/subscribe")
   def subscribe(): WsHandler = connectionPool.wsHandler { connection =>
-    connectionPool.send(Ws.Text(messageList().render))(connection)
+    connectionPool.send(Ws.Text(messageList(db.getMessages).render))(connection)
   }
 
   def renderList(): ujson.Obj = {
-    connectionPool.sendAll(Ws.Text(messageList().render))
+    connectionPool.sendAll(connection => {
+      val connParams = connectionPool.getConnectionParams(connection) match {
+        case Some(value) => value
+        case None => ConnectionParams(None)
+      }
+      Ws.Text(messageList(userFilter(connParams.userFilter), connParams.isCascade).render)
+    })
     ujson.Obj("success" -> true, "err" -> "")
   }
 
@@ -136,23 +140,6 @@ object RedditApplication extends cask.MainRoutes {
     }
   }
 
-  @cask.postJson("/cascade")
-  def cascadeToggle(): ujson.Obj = {
-    println("Toggle cascade")
-    isCascade = !isCascade
-    connectionPool.sendAll(Ws.Text(s"display#$isCascade"))
-    renderList()
-    ujson.Obj("success" -> true, "err" -> "")
-  }
-
-  @cask.postJson("/user-filter")
-  def applyFilter(filterStr: String): ujson.Obj = {
-    println("Filter apply", filterStr)
-    if (filterStr.nonEmpty) filter = Some(filterStr)
-    else filter = None
-    renderList()
-    ujson.Obj("success" -> true, "err" -> "")
-  }
 
   def messagesToJSON(msgs: List[Message]): List[ujson.Obj] = for (Message(id, to, username, msg) <- msgs) yield ujson.Obj("id" -> id, "username" -> username, "msg" -> msg)
 

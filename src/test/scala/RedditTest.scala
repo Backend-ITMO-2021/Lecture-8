@@ -53,9 +53,6 @@ object RedditTest extends TestSuite {
       assert(success2.text().contains("ilya"))
       assert(success2.text().contains("Test Message!"))
       assert(success2.statusCode == 200)
-
-      val responseChangeDisplay = requests.post(host + "/cascade", data = ujson.Obj())
-      assert(responseChangeDisplay.statusCode == 200)
     }
     test("failure") - withServer(RedditApplication) { host =>
       val response1 = requests.post(host, data = ujson.Obj("name" -> "ilya"), check = false)
